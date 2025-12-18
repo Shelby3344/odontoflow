@@ -1,57 +1,127 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { motion } from 'framer-motion';
+import { ArrowLeftIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import toast from 'react-hot-toast';
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email('Email inválido'),
+});
+
+type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
 export function ForgotPasswordPage() {
-  const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSent(true);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ForgotPasswordFormData>({
+    resolver: zodResolver(forgotPasswordSchema),
+  });
+
+  const onSubmit = async (data: ForgotPasswordFormData) => {
+    setIsLoading(true);
+    
+    try {
+      // Simular envio
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      setIsSuccess(true);
+    } catch (error) {
+      toast.error('Erro ao enviar email de recuperação');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  if (isSuccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-md text-center"
+        >
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircleIcon className="w-8 h-8 text-green-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Email Enviado!
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Verifique sua caixa de entrada e siga as instruções para redefinir sua senha.
+          </p>
+          <Link to="/login">
+            <Button variant="outline" className="w-full">
+              Voltar para o Login
+            </Button>
+          </Link>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Recuperar Senha
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">
-            Digite seu email para receber as instruções
+    <div className="min-h-screen flex items-center justify-center p-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md"
+      >
+        <Link 
+          to="/login"
+          className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-8"
+        >
+          <ArrowLeftIcon className="w-4 h-4" />
+          Voltar para o login
+        </Link>
+
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center">
+            <span className="text-white font-bold text-2xl">O</span>
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              OdontoFlow
+            </h1>
+          </div>
+        </div>
+
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Esqueceu a senha?
+          </h2>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
+            Digite seu email e enviaremos instruções para redefinir sua senha.
           </p>
         </div>
 
-        {sent ? (
-          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg text-center">
-            <p className="text-green-800 dark:text-green-200">
-              Email enviado! Verifique sua caixa de entrada.
-            </p>
-            <Link to="/login" className="text-primary-600 hover:underline mt-4 inline-block">
-              Voltar ao login
-            </Link>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
-              required
-            />
-            <Button type="submit" className="w-full">
-              Enviar instruções
-            </Button>
-            <Link to="/login" className="block text-center text-sm text-primary-600 hover:underline">
-              Voltar ao login
-            </Link>
-          </form>
-        )}
-      </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <Input
+            label="Email"
+            type="email"
+            placeholder="seu@email.com"
+            error={errors.email?.message}
+            {...register('email')}
+          />
+
+          <Button
+            type="submit"
+            className="w-full"
+            size="lg"
+            isLoading={isLoading}
+          >
+            Enviar Instruções
+          </Button>
+        </form>
+      </motion.div>
     </div>
   );
 }

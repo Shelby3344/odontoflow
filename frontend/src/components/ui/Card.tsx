@@ -1,100 +1,82 @@
-import { HTMLAttributes, forwardRef } from 'react';
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import React from 'react';
+import './Card.css';
 
-interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  variant?: 'default' | 'bordered' | 'elevated';
+export interface CardProps {
+  children: React.ReactNode;
+  className?: string;
   padding?: 'none' | 'sm' | 'md' | 'lg';
+  hover?: boolean;
+  onClick?: () => void;
 }
 
-const variantStyles = {
-  default: 'bg-white dark:bg-gray-800',
-  bordered: 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-  elevated: 'bg-white dark:bg-gray-800 shadow-lg',
+export const Card: React.FC<CardProps> = ({
+  children,
+  className = '',
+  padding = 'md',
+  hover = false,
+  onClick
+}) => {
+  const classes = [
+    'card',
+    `card-padding-${padding}`,
+    hover && 'card-hover',
+    onClick && 'card-clickable',
+    className
+  ].filter(Boolean).join(' ');
+
+  return (
+    <div className={classes} onClick={onClick}>
+      {children}
+    </div>
+  );
 };
 
-const paddingStyles = {
-  none: '',
-  sm: 'p-4',
-  md: 'p-6',
-  lg: 'p-8',
-};
-
-export const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ className, variant = 'bordered', padding = 'md', children, ...props }, ref) => {
-    return (
-      <div
-        ref={ref}
-        className={twMerge(
-          clsx(
-            'rounded-xl',
-            variantStyles[variant],
-            paddingStyles[padding],
-            className
-          )
-        )}
-        {...props}
-      >
-        {children}
-      </div>
-    );
-  }
-);
-
-Card.displayName = 'Card';
-
-// Card Header
-interface CardHeaderProps extends HTMLAttributes<HTMLDivElement> {
-  title: string;
-  subtitle?: string;
+export interface CardHeaderProps {
+  children: React.ReactNode;
+  className?: string;
   action?: React.ReactNode;
 }
 
-export function CardHeader({ title, subtitle, action, className, ...props }: CardHeaderProps) {
-  return (
-    <div
-      className={twMerge(
-        clsx('flex items-center justify-between mb-4', className)
-      )}
-      {...props}
-    >
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          {title}
-        </h3>
-        {subtitle && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            {subtitle}
-          </p>
-        )}
-      </div>
-      {action && <div>{action}</div>}
-    </div>
-  );
+export const CardHeader: React.FC<CardHeaderProps> = ({
+  children,
+  className = '',
+  action
+}) => (
+  <div className={`card-header ${className}`}>
+    <div className="card-header-content">{children}</div>
+    {action && <div className="card-header-action">{action}</div>}
+  </div>
+);
+
+export interface CardTitleProps {
+  children: React.ReactNode;
+  className?: string;
+  subtitle?: string;
 }
 
-// Card Content
-export function CardContent({ className, children, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div className={twMerge(clsx('', className))} {...props}>
-      {children}
-    </div>
-  );
-}
+export const CardTitle: React.FC<CardTitleProps> = ({
+  children,
+  className = '',
+  subtitle
+}) => (
+  <div className={`card-title-wrapper ${className}`}>
+    <h3 className="card-title">{children}</h3>
+    {subtitle && <p className="card-subtitle">{subtitle}</p>}
+  </div>
+);
 
-// Card Footer
-export function CardFooter({ className, children, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={twMerge(
-        clsx(
-          'mt-4 pt-4 border-t border-gray-200 dark:border-gray-700',
-          className
-        )
-      )}
-      {...props}
-    >
-      {children}
-    </div>
-  );
-}
+export const CardContent: React.FC<{ children: React.ReactNode; className?: string }> = ({
+  children,
+  className = ''
+}) => (
+  <div className={`card-content ${className}`}>{children}</div>
+);
+
+export const CardFooter: React.FC<{ children: React.ReactNode; className?: string }> = ({
+  children,
+  className = ''
+}) => (
+  <div className={`card-footer ${className}`}>{children}</div>
+);
+
+export default Card;

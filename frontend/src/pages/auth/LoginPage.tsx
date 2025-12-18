@@ -1,226 +1,186 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { motion } from 'framer-motion';
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import toast from 'react-hot-toast';
+import './LoginPage.css';
 
-const loginSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
-
-export function LoginPage() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
-  const onSubmit = async (data: LoginFormData) => {
-    setIsLoading(true);
-    
     try {
-      await login(data.email, data.password);
-      toast.success('Login realizado com sucesso!');
+      await login(email, password);
       navigate('/dashboard');
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Erro ao fazer login';
-      toast.error(message);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Credenciais inválidas');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
-        >
-          {/* Logo */}
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-2xl">O</span>
+    <div className="login-page">
+      <div className="login-container">
+        {/* Left Side - Branding */}
+        <div className="login-branding">
+          <div className="branding-content">
+            <div className="branding-logo">
+              <svg viewBox="0 0 48 48" fill="none">
+                <rect width="48" height="48" rx="12" fill="url(#login-logo-gradient)" />
+                <path d="M24 12c-6.6 0-12 5.4-12 12s5.4 12 12 12 12-5.4 12-12-5.4-12-12-12zm0 21c-4.95 0-9-4.05-9-9s4.05-9 9-9 9 4.05 9 9-4.05 9-9 9z" fill="white" />
+                <circle cx="24" cy="24" r="4.5" fill="white" />
+                <defs>
+                  <linearGradient id="login-logo-gradient" x1="0" y1="0" x2="48" y2="48">
+                    <stop stopColor="#3B82F6" />
+                    <stop offset="1" stopColor="#1D4ED8" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <span>OdontoFlow</span>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                OdontoFlow
-              </h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Gestão Inteligente
-              </p>
-            </div>
-          </div>
-
-          {/* Welcome text */}
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Bem-vindo de volta
-            </h2>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
-              Entre com suas credenciais para acessar o sistema
+            <h1 className="branding-title">
+              Gestão odontológica<br />
+              <span>inteligente e moderna</span>
+            </h1>
+            <p className="branding-description">
+              Simplifique a gestão da sua clínica com IA, agenda inteligente, 
+              prontuário digital e muito mais.
             </p>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <Input
-              label="Email"
-              type="email"
-              placeholder="seu@email.com"
-              error={errors.email?.message}
-              {...register('email')}
-            />
-
-            <div className="relative">
-              <Input
-                label="Senha"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                error={errors.password?.message}
-                rightIcon={
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="focus:outline-none"
-                  >
-                    {showPassword ? (
-                      <EyeSlashIcon className="w-5 h-5" />
-                    ) : (
-                      <EyeIcon className="w-5 h-5" />
-                    )}
-                  </button>
-                }
-                {...register('password')}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                />
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  Lembrar de mim
-                </span>
-              </label>
-
-              <Link
-                to="/forgot-password"
-                className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400"
-              >
-                Esqueceu a senha?
-              </Link>
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full"
-              size="lg"
-              isLoading={isLoading}
-            >
-              Entrar
-            </Button>
-          </form>
-
-          {/* Footer */}
-          <p className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
-            Não tem uma conta?{' '}
-            <a
-              href="https://odontoflow.com.br/contato"
-              className="text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium"
-            >
-              Entre em contato
-            </a>
-          </p>
-        </motion.div>
-      </div>
-
-      {/* Right side - Image/Branding */}
-      <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-primary-600 to-primary-800 p-12 items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="max-w-lg text-white"
-        >
-          <h2 className="text-4xl font-bold mb-6">
-            Transforme sua clínica com Inteligência Artificial
-          </h2>
-          <p className="text-lg text-primary-100 mb-8">
-            Automatize tarefas, reduza faltas, aumente a receita e ofereça uma 
-            experiência premium para seus pacientes.
-          </p>
-
-          <div className="space-y-4">
-            {[
-              'Prontuário eletrônico inteligente',
-              'Agenda preditiva com IA',
-              'Comunicação automatizada',
-              'Insights financeiros em tempo real',
-            ].map((feature, index) => (
-              <motion.div
-                key={feature}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: 0.4 + index * 0.1 }}
-                className="flex items-center gap-3"
-              >
-                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                  <svg
-                    className="w-4 h-4 text-white"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                </div>
-                <span className="text-primary-50">{feature}</span>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="mt-12 pt-8 border-t border-white/20">
-            <p className="text-primary-200 text-sm">
-              "O OdontoFlow revolucionou a gestão da minha clínica. A IA 
-              economiza horas do meu dia."
-            </p>
-            <div className="mt-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/20" />
-              <div>
-                <p className="font-medium">Dr. Carlos Silva</p>
-                <p className="text-sm text-primary-200">Odontoclínica Premium</p>
+            <div className="branding-features">
+              <div className="feature-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <path d="M22 4L12 14.01l-3-3" />
+                </svg>
+                <span>Agenda com IA preditiva</span>
+              </div>
+              <div className="feature-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <path d="M22 4L12 14.01l-3-3" />
+                </svg>
+                <span>Odontograma interativo</span>
+              </div>
+              <div className="feature-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <path d="M22 4L12 14.01l-3-3" />
+                </svg>
+                <span>Financeiro completo</span>
+              </div>
+              <div className="feature-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <path d="M22 4L12 14.01l-3-3" />
+                </svg>
+                <span>Relatórios avançados</span>
               </div>
             </div>
           </div>
-        </motion.div>
+          <div className="branding-footer">
+            <p>© 2024 OdontoFlow. Todos os direitos reservados.</p>
+          </div>
+        </div>
+
+        {/* Right Side - Login Form */}
+        <div className="login-form-container">
+          <div className="login-form-wrapper">
+            <div className="login-header">
+              <h2>Bem-vindo de volta</h2>
+              <p>Entre com suas credenciais para acessar o sistema</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="login-form">
+              {error && (
+                <div className="login-error">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 8v4M12 16h.01" />
+                  </svg>
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <Input
+                label="E-mail"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                fullWidth
+                leftIcon={
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    <path d="M22 6l-10 7L2 6" />
+                  </svg>
+                }
+              />
+
+              <Input
+                label="Senha"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                fullWidth
+                leftIcon={
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                }
+              />
+
+              <div className="login-options">
+                <label className="remember-me">
+                  <input type="checkbox" />
+                  <span>Lembrar de mim</span>
+                </label>
+                <a href="/forgot-password" className="forgot-password">
+                  Esqueceu a senha?
+                </a>
+              </div>
+
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                fullWidth
+                isLoading={loading}
+              >
+                Entrar
+              </Button>
+            </form>
+
+            <div className="login-demo">
+              <p>Credenciais de demonstração:</p>
+              <div className="demo-credentials">
+                <button onClick={() => { setEmail('admin@odontoflow.com.br'); setPassword('admin123'); }}>
+                  Admin
+                </button>
+                <button onClick={() => { setEmail('dentista@odontoflow.com.br'); setPassword('dentista123'); }}>
+                  Dentista
+                </button>
+                <button onClick={() => { setEmail('recepcao@odontoflow.com.br'); setPassword('recepcao123'); }}>
+                  Recepção
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
-}
+};
+
+export default LoginPage;

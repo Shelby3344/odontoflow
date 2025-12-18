@@ -1,5 +1,8 @@
+import React from 'react';
 import { Outlet } from 'react-router-dom';
 
-export function AuthLayout() {
+export const AuthLayout: React.FC = () => {
   return <Outlet />;
-}
+};
+
+export default AuthLayout;

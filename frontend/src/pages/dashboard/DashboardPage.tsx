@@ -1,379 +1,349 @@
-import { useQuery } from '@tanstack/react-query';
-import { 
-  UsersIcon, 
-  CalendarDaysIcon, 
-  CurrencyDollarIcon,
-  ClockIcon,
-  ArrowTrendingUpIcon,
-  ArrowTrendingDownIcon,
-  ExclamationTriangleIcon,
-  SparklesIcon,
-} from '@heroicons/react/24/outline';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { reportService, patientService, aiService } from '../../services/api';
-import { Card, CardHeader, CardContent } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-} from 'recharts';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
+import { StatsCard } from '../../components/dashboard/StatsCard';
+import { AppointmentsList, Appointment } from '../../components/dashboard/AppointmentsList';
+import { Button } from '../../components/ui/Button';
+import api from '../../services/api';
+import './DashboardPage.css';
 
 interface DashboardData {
   stats: {
-    patients_total: number;
-    patients_new_month: number;
-    appointments_today: number;
-    appointments_pending: number;
-    revenue_month: number;
-    revenue_growth: number;
-    no_show_rate: number;
+    patients: { total: number; new_month: number; growth: number };
+    appointments: { today: number; pending: number; month: number; completed_month: number; no_show_rate: number };
+    financial: { revenue_month: number; revenue_growth: number; pending: number; overdue: number };
   };
-  appointments_today: Array<{
-    id: string;
-    time: string;
-    patient_name: string;
-    type: string;
-    status: string;
-  }>;
-  revenue_chart: Array<{
-    date: string;
-    value: number;
-  }>;
-  procedures_chart: Array<{
-    name: string;
-    count: number;
-  }>;
+  appointments_today: Appointment[];
+  charts: {
+    revenue: { date: string; total: number }[];
+    appointments: { date: string; total: number; completed: number; no_show: number }[];
+    top_procedures: { procedure_type: string; count: number; revenue: number }[];
+  };
+  alerts: { type: string; title: string; message: string; action: string }[];
 }
 
-export function DashboardPage() {
+export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const { data: dashboard, isLoading } = useQuery({
-    queryKey: ['dashboard'],
-    queryFn: async () => {
-      const response = await reportService.getDashboard();
-      return response.data as DashboardData;
-    },
-  });
+  useEffect(() => {
+    loadDashboard();
+  }, []);
 
-  const { data: atRiskPatients } = useQuery({
-    queryKey: ['patients-at-risk'],
-    queryFn: async () => {
-      const response = await patientService.atRisk();
-      return response.data.data;
-    },
-  });
+  const loadDashboard = async () => {
+    try {
+      const response = await api.get('/dashboard');
+      setData(response.data.data);
+    } catch (error) {
+      console.error('Erro ao carregar dashboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const { data: aiInsights } = useQuery({
-    queryKey: ['ai-insights'],
-    queryFn: async () => {
-      const response = await aiService.getFinancialInsights('month');
-      return response.data;
-    },
-  });
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
 
-  const stats = [
-    {
-      name: 'Pacientes',
-      value: dashboard?.stats.patients_total || 0,
-      change: `+${dashboard?.stats.patients_new_month || 0} este mês`,
-      changeType: 'positive',
-      icon: UsersIcon,
-      color: 'bg-blue-500',
-    },
-    {
-      name: 'Consultas Hoje',
-      value: dashboard?.stats.appointments_today || 0,
-      change: `${dashboard?.stats.appointments_pending || 0} pendentes`,
-      changeType: 'neutral',
-      icon: CalendarDaysIcon,
-      color: 'bg-green-500',
-    },
-    {
-      name: 'Receita do Mês',
-      value: new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      }).format(dashboard?.stats.revenue_month || 0),
-      change: `${dashboard?.stats.revenue_growth || 0}% vs mês anterior`,
-      changeType: (dashboard?.stats.revenue_growth || 0) >= 0 ? 'positive' : 'negative',
-      icon: CurrencyDollarIcon,
-      color: 'bg-purple-500',
-    },
-    {
-      name: 'Taxa de Faltas',
-      value: `${((dashboard?.stats.no_show_rate || 0) * 100).toFixed(1)}%`,
-      change: 'últimos 30 dias',
-      changeType: (dashboard?.stats.no_show_rate || 0) > 0.15 ? 'negative' : 'positive',
-      icon: ClockIcon,
-      color: 'bg-orange-500',
-    },
-  ];
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" />
-      </div>
-    );
-  }
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Bom dia';
+    if (hour < 18) return 'Boa tarde';
+    return 'Boa noite';
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Dashboard
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400">
-            {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
-          </p>
+    <div className="dashboard-page">
+      {/* Page Header */}
+      <div className="page-header">
+        <div className="page-header-content">
+          <h1 className="page-title">{getGreeting()}! 👋</h1>
+          <p className="page-subtitle">Aqui está o resumo da sua clínica hoje</p>
         </div>
-        <Button onClick={() => navigate('/schedule')}>
-          <CalendarDaysIcon className="w-5 h-5 mr-2" />
-          Ver Agenda
-        </Button>
+        <div className="page-header-actions">
+          <Button variant="outline" onClick={() => navigate('/reports')}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 20V10M12 20V4M6 20v-6" />
+            </svg>
+            Ver Relatórios
+          </Button>
+          <Button variant="primary" onClick={() => navigate('/schedule/new')}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Novo Agendamento
+          </Button>
+        </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <Card key={stat.name} className="relative overflow-hidden">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {stat.name}
-                </p>
-                <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
-                  {stat.value}
-                </p>
-                <p
-                  className={`mt-1 text-sm flex items-center gap-1 ${
-                    stat.changeType === 'positive'
-                      ? 'text-green-600'
-                      : stat.changeType === 'negative'
-                      ? 'text-red-600'
-                      : 'text-gray-500'
-                  }`}
-                >
-                  {stat.changeType === 'positive' && (
-                    <ArrowTrendingUpIcon className="w-4 h-4" />
-                  )}
-                  {stat.changeType === 'negative' && (
-                    <ArrowTrendingDownIcon className="w-4 h-4" />
-                  )}
-                  {stat.change}
-                </p>
-              </div>
-              <div className={`p-3 rounded-lg ${stat.color}`}>
-                <stat.icon className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </Card>
-        ))}
+      <div className="stats-grid">
+        <StatsCard
+          title="Consultas Hoje"
+          value={data?.stats.appointments.today ?? 0}
+          change={data?.stats.appointments.no_show_rate ? -data.stats.appointments.no_show_rate : undefined}
+          changeLabel={`${data?.stats.appointments.pending ?? 0} pendentes`}
+          trend={data?.stats.appointments.no_show_rate && data.stats.appointments.no_show_rate > 10 ? 'down' : 'neutral'}
+          iconColor="primary"
+          loading={loading}
+          icon={
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <path d="M16 2v4M8 2v4M3 10h18" />
+            </svg>
+          }
+        />
+        <StatsCard
+          title="Pacientes Ativos"
+          value={data?.stats.patients.total ?? 0}
+          change={data?.stats.patients.growth}
+          changeLabel={`${data?.stats.patients.new_month ?? 0} novos este mês`}
+          trend={data?.stats.patients.growth && data.stats.patients.growth > 0 ? 'up' : 'neutral'}
+          iconColor="secondary"
+          loading={loading}
+          icon={
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          }
+        />
+        <StatsCard
+          title="Receita do Mês"
+          value={formatCurrency(data?.stats.financial.revenue_month ?? 0)}
+          change={data?.stats.financial.revenue_growth}
+          changeLabel="vs. mês anterior"
+          trend={data?.stats.financial.revenue_growth && data.stats.financial.revenue_growth > 0 ? 'up' : 'down'}
+          iconColor="success"
+          loading={loading}
+          icon={
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+          }
+        />
+        <StatsCard
+          title="A Receber"
+          value={formatCurrency(data?.stats.financial.pending ?? 0)}
+          changeLabel={data?.stats.financial.overdue ? `${formatCurrency(data.stats.financial.overdue)} em atraso` : undefined}
+          iconColor={data?.stats.financial.overdue && data.stats.financial.overdue > 0 ? 'danger' : 'warning'}
+          loading={loading}
+          icon={
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 6v6l4 2" />
+            </svg>
+          }
+        />
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Chart */}
-        <Card>
-          <CardHeader title="Receita" subtitle="Últimos 30 dias" />
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dashboard?.revenue_chart || []}>
-                  <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                  <XAxis 
-                    dataKey="date" 
-                    tick={{ fontSize: 12 }}
-                    className="text-gray-500"
-                  />
-                  <YAxis 
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(value) => `R$${value / 1000}k`}
-                    className="text-gray-500"
-                  />
-                  <Tooltip
-                    formatter={(value: number) =>
-                      new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                      }).format(value)
-                    }
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#6366f1"
-                    fillOpacity={1}
-                    fill="url(#colorRevenue)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Procedures Chart */}
-        <Card>
-          <CardHeader title="Procedimentos" subtitle="Mais realizados" />
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dashboard?.procedures_chart || []} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                  <XAxis type="number" tick={{ fontSize: 12 }} />
-                  <YAxis 
-                    dataKey="name" 
-                    type="category" 
-                    tick={{ fontSize: 12 }}
-                    width={100}
-                  />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#10b981" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Content Grid */}
+      <div className="dashboard-grid">
         {/* Today's Appointments */}
-        <Card className="lg:col-span-2">
-          <CardHeader
-            title="Agenda de Hoje"
-            action={
-              <Button variant="ghost" size="sm" onClick={() => navigate('/schedule')}>
-                Ver tudo
-              </Button>
-            }
-          />
+        <Card className="appointments-card" padding="none">
+          <CardHeader action={
+            <Button variant="ghost" size="sm" onClick={() => navigate('/schedule')}>
+              Ver agenda completa
+            </Button>
+          }>
+            <CardTitle subtitle={`${data?.appointments_today.length ?? 0} agendamentos`}>
+              Agenda de Hoje
+            </CardTitle>
+          </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {dashboard?.appointments_today?.length === 0 ? (
-                <p className="text-center text-gray-500 dark:text-gray-400 py-8">
-                  Nenhuma consulta agendada para hoje
-                </p>
-              ) : (
-                dashboard?.appointments_today?.map((apt) => (
-                  <div
-                    key={apt.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white w-16">
-                        {apt.time}
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900 dark:text-white">
-                          {apt.patient_name}
-                        </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {apt.type}
-                        </p>
-                      </div>
-                    </div>
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        apt.status === 'confirmed'
-                          ? 'bg-green-100 text-green-800'
-                          : apt.status === 'waiting'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-blue-100 text-blue-800'
-                      }`}
-                    >
-                      {apt.status === 'confirmed'
-                        ? 'Confirmado'
-                        : apt.status === 'waiting'
-                        ? 'Aguardando'
-                        : 'Agendado'}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
+            <AppointmentsList
+              appointments={data?.appointments_today ?? []}
+              loading={loading}
+              onAppointmentClick={(apt) => navigate(`/schedule/${apt.id}`)}
+            />
           </CardContent>
         </Card>
 
-        {/* AI Insights & Alerts */}
-        <Card>
-          <CardHeader
-            title="Insights IA"
-            action={<SparklesIcon className="w-5 h-5 text-primary-500" />}
-          />
+        {/* Alerts & Notifications */}
+        <Card className="alerts-card" padding="none">
+          <CardHeader>
+            <CardTitle subtitle="Ações recomendadas">
+              Alertas
+            </CardTitle>
+          </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {/* At Risk Patients Alert */}
-              {atRiskPatients && atRiskPatients.length > 0 && (
-                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                  <div className="flex items-start gap-2">
-                    <ExclamationTriangleIcon className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                        {atRiskPatients.length} pacientes em risco
-                      </p>
-                      <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                        Pacientes com alto risco de abandono de tratamento
-                      </p>
+            {loading ? (
+              <div className="alerts-loading">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="alert-skeleton">
+                    <div className="skeleton skeleton-alert-icon" />
+                    <div className="skeleton-content">
+                      <div className="skeleton skeleton-alert-title" />
+                      <div className="skeleton skeleton-alert-message" />
                     </div>
                   </div>
-                </div>
-              )}
+                ))}
+              </div>
+            ) : data?.alerts && data.alerts.length > 0 ? (
+              <div className="alerts-list">
+                {data.alerts.map((alert, index) => (
+                  <div
+                    key={index}
+                    className={`alert-item alert-${alert.type}`}
+                    onClick={() => navigate(alert.action)}
+                  >
+                    <div className="alert-icon">
+                      {alert.type === 'danger' && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M12 8v4M12 16h.01" />
+                        </svg>
+                      )}
+                      {alert.type === 'warning' && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                          <path d="M12 9v4M12 17h.01" />
+                        </svg>
+                      )}
+                      {alert.type === 'info' && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M12 16v-4M12 8h.01" />
+                        </svg>
+                      )}
+                      {alert.type === 'success' && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                          <path d="M22 4L12 14.01l-3-3" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="alert-content">
+                      <span className="alert-title">{alert.title}</span>
+                      <span className="alert-message">{alert.message}</span>
+                    </div>
+                    <svg className="alert-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M9 18l6-6-6-6" />
+                    </svg>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="alerts-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <path d="M22 4L12 14.01l-3-3" />
+                </svg>
+                <p>Tudo em ordem! Nenhum alerta no momento.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-              {/* AI Generated Insights */}
-              {aiInsights?.insights?.slice(0, 3).map((insight: any, index: number) => (
-                <div
-                  key={index}
-                  className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
-                >
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {insight.title}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {insight.description}
-                  </p>
-                  {insight.potential_value > 0 && (
-                    <p className="text-xs text-green-600 dark:text-green-400 mt-2">
-                      Potencial: {new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                      }).format(insight.potential_value)}
-                    </p>
-                  )}
-                </div>
-              ))}
+        {/* Top Procedures */}
+        <Card className="procedures-card" padding="none">
+          <CardHeader action={
+            <Button variant="ghost" size="sm" onClick={() => navigate('/reports/procedures')}>
+              Ver todos
+            </Button>
+          }>
+            <CardTitle subtitle="Mais realizados este mês">
+              Procedimentos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="procedures-loading">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <div key={i} className="procedure-skeleton">
+                    <div className="skeleton skeleton-procedure-name" />
+                    <div className="skeleton skeleton-procedure-bar" />
+                  </div>
+                ))}
+              </div>
+            ) : data?.charts.top_procedures && data.charts.top_procedures.length > 0 ? (
+              <div className="procedures-list">
+                {data.charts.top_procedures.map((proc, index) => {
+                  const maxRevenue = Math.max(...data.charts.top_procedures.map(p => p.revenue));
+                  const percentage = (proc.revenue / maxRevenue) * 100;
+                  
+                  return (
+                    <div key={index} className="procedure-item">
+                      <div className="procedure-info">
+                        <span className="procedure-name">{proc.procedure_type}</span>
+                        <span className="procedure-stats">
+                          {proc.count}x • {formatCurrency(proc.revenue)}
+                        </span>
+                      </div>
+                      <div className="procedure-bar">
+                        <div
+                          className="procedure-bar-fill"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="procedures-empty">
+                <p>Nenhum procedimento registrado este mês</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => navigate('/ai-assistant')}
-              >
-                <SparklesIcon className="w-4 h-4 mr-2" />
-                Ver mais insights
-              </Button>
+        {/* Quick Actions */}
+        <Card className="quick-actions-card">
+          <CardHeader>
+            <CardTitle>Ações Rápidas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="quick-actions-grid">
+              <button className="quick-action" onClick={() => navigate('/patients/new')}>
+                <div className="quick-action-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="8.5" cy="7" r="4" />
+                    <path d="M20 8v6M23 11h-6" />
+                  </svg>
+                </div>
+                <span>Novo Paciente</span>
+              </button>
+              <button className="quick-action" onClick={() => navigate('/financial/transactions/new')}>
+                <div className="quick-action-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="1" y="4" width="22" height="16" rx="2" />
+                    <path d="M1 10h22" />
+                  </svg>
+                </div>
+                <span>Registrar Pagamento</span>
+              </button>
+              <button className="quick-action" onClick={() => navigate('/financial/budgets/new')}>
+                <div className="quick-action-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+                  </svg>
+                </div>
+                <span>Criar Orçamento</span>
+              </button>
+              <button className="quick-action" onClick={() => navigate('/ai')}>
+                <div className="quick-action-icon quick-action-icon-ai">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z" />
+                    <circle cx="7.5" cy="14.5" r="1.5" />
+                    <circle cx="16.5" cy="14.5" r="1.5" />
+                  </svg>
+                </div>
+                <span>Assistente IA</span>
+              </button>
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
   );
-}
+};
+
+export default DashboardPage;

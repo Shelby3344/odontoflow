@@ -231,3 +231,5 @@ export const reportService = {
   export: (type: string, params?: Record<string, unknown>) => 
     api.get(`/reports/export/${type}`, { params, responseType: 'blob' }),
 };
+
+export default api;

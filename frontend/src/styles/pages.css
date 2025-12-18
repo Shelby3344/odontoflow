@@ -1,0 +1,117 @@
+/* ============================================
+   PAGE-SPECIFIC STYLES
+   Styles for pages that use Tailwind classes
+   ============================================ */
+
+/* Schedule Page */
+.schedule-page table {
+  border-collapse: collapse;
+}
+
+.schedule-page th,
+.schedule-page td {
+  border: 1px solid var(--border-light);
+}
+
+[data-theme="dark"] .schedule-page th {
+  background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .schedule-page td:hover {
+  background: var(--bg-hover);
+}
+
+/* Financial Pages */
+.financial-page .status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* AI Assistant Page */
+.ai-page .chat-message {
+  max-width: 80%;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+}
+
+.ai-page .chat-message-user {
+  background: var(--primary-600);
+  color: white;
+  margin-left: auto;
+}
+
+.ai-page .chat-message-assistant {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* Clinical/Odontogram Page */
+.odontogram-page .tooth {
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.odontogram-page .tooth:hover {
+  transform: scale(1.05);
+}
+
+/* Reports Page */
+.reports-page .chart-container {
+  background: var(--card-bg);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4);
+}
+
+/* Common Page Styles */
+.page-container {
+  animation: fadeIn var(--transition-base) ease-out;
+}
+
+/* Fix for Tailwind dark mode classes */
+[data-theme="dark"] .dark\:bg-gray-700 { background-color: var(--bg-tertiary); }
+[data-theme="dark"] .dark\:bg-gray-800 { background-color: var(--bg-secondary); }
+[data-theme="dark"] .dark\:bg-gray-600 { background-color: var(--bg-hover); }
+[data-theme="dark"] .dark\:text-white { color: var(--text-primary); }
+[data-theme="dark"] .dark\:text-gray-300 { color: var(--text-secondary); }
+[data-theme="dark"] .dark\:text-gray-400 { color: var(--text-tertiary); }
+[data-theme="dark"] .dark\:border-gray-600 { border-color: var(--border-default); }
+[data-theme="dark"] .dark\:border-gray-700 { border-color: var(--border-light); }
+[data-theme="dark"] .dark\:divide-gray-700 > :not([hidden]) ~ :not([hidden]) { border-color: var(--border-light); }
+[data-theme="dark"] .dark\:hover\:bg-gray-700:hover { background-color: var(--bg-hover); }
+
+/* Fix for colored backgrounds in dark mode */
+[data-theme="dark"] .dark\:bg-primary-900\/20 { background-color: rgba(59, 130, 246, 0.15); }
+[data-theme="dark"] .dark\:bg-green-900\/20 { background-color: rgba(34, 197, 94, 0.15); }
+[data-theme="dark"] .dark\:bg-green-900\/30 { background-color: rgba(34, 197, 94, 0.2); }
+[data-theme="dark"] .dark\:bg-yellow-900\/20 { background-color: rgba(245, 158, 11, 0.15); }
+[data-theme="dark"] .dark\:bg-yellow-900\/30 { background-color: rgba(245, 158, 11, 0.2); }
+[data-theme="dark"] .dark\:bg-red-900\/20 { background-color: rgba(239, 68, 68, 0.15); }
+[data-theme="dark"] .dark\:bg-red-900\/30 { background-color: rgba(239, 68, 68, 0.2); }
+[data-theme="dark"] .dark\:bg-blue-900\/20 { background-color: rgba(59, 130, 246, 0.15); }
+[data-theme="dark"] .dark\:bg-blue-900\/30 { background-color: rgba(59, 130, 246, 0.2); }
+[data-theme="dark"] .dark\:bg-purple-900\/20 { background-color: rgba(139, 92, 246, 0.15); }
+[data-theme="dark"] .dark\:bg-purple-900\/30 { background-color: rgba(139, 92, 246, 0.2); }
+
+/* Fix for text colors in dark mode */
+[data-theme="dark"] .dark\:text-green-300 { color: #86efac; }
+[data-theme="dark"] .dark\:text-green-400 { color: #4ade80; }
+[data-theme="dark"] .dark\:text-yellow-300 { color: #fde047; }
+[data-theme="dark"] .dark\:text-yellow-400 { color: #facc15; }
+[data-theme="dark"] .dark\:text-red-300 { color: #fca5a5; }
+[data-theme="dark"] .dark\:text-red-400 { color: #f87171; }
+[data-theme="dark"] .dark\:text-blue-300 { color: #93c5fd; }
+[data-theme="dark"] .dark\:text-blue-400 { color: #60a5fa; }
+[data-theme="dark"] .dark\:text-purple-300 { color: #c4b5fd; }
+[data-theme="dark"] .dark\:text-purple-400 { color: #a78bfa; }
+
+/* Fix for primary colors in dark mode */
+[data-theme="dark"] .dark\:text-primary-300 { color: #93c5fd; }
+[data-theme="dark"] .dark\:text-primary-400 { color: #60a5fa; }
+[data-theme="dark"] .dark\:hover\:bg-primary-900\/20:hover { background-color: rgba(59, 130, 246, 0.15); }
+
+/* Fix for gray backgrounds with opacity */
+[data-theme="dark"] .dark\:bg-gray-700\/50 { background-color: rgba(39, 39, 42, 0.5); }

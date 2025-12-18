@@ -21,7 +21,7 @@ return new class extends Migration
             
             // Contexto
             $table->string('context_type', 50);
-            $table->jsonb('context_data');
+            $table->json('context_data')->nullable();
             
             // Request
             $table->text('prompt');
@@ -65,7 +65,7 @@ return new class extends Migration
             
             // Metadados
             $table->string('source')->nullable();
-            $table->jsonb('metadata')->default('{}');
+            $table->json('metadata')->nullable();
             
             // Status
             $table->boolean('is_active')->default(true);
@@ -88,8 +88,8 @@ return new class extends Migration
             $table->uuid('user_id');
             
             $table->string('title')->nullable();
-            $table->jsonb('messages')->default('[]');
-            $table->jsonb('context')->nullable();
+            $table->json('messages')->nullable();
+            $table->json('context')->nullable();
             
             $table->timestamp('last_message_at')->nullable();
             $table->timestamps();
@@ -104,11 +104,11 @@ return new class extends Migration
             $table->uuid('interaction_id');
             
             $table->string('suggestion_type', 50);
-            $table->jsonb('suggestion_data');
+            $table->json('suggestion_data')->nullable();
             
             // Resultado
             $table->boolean('was_used')->nullable();
-            $table->jsonb('modifications')->nullable();
+            $table->json('modifications')->nullable();
             
             $table->timestamp('created_at');
             

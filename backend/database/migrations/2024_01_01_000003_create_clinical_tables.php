@@ -13,7 +13,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('patient_id');
             
-            $table->jsonb('data')->default('{}');
+            $table->json('data')->nullable();
             
             $table->integer('version')->default(1);
             $table->uuid('filled_by')->nullable();
@@ -47,7 +47,7 @@ return new class extends Migration
             
             // IA
             $table->boolean('ai_generated')->default(false);
-            $table->jsonb('ai_suggestions')->nullable();
+            $table->json('ai_suggestions')->nullable();
             $table->decimal('ai_confidence', 3, 2)->nullable();
             
             // Versionamento
@@ -74,7 +74,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('patient_id');
             
-            $table->jsonb('teeth_data')->default('{}');
+            $table->json('teeth_data')->nullable();
             $table->string('type', 20)->default('permanent');
             
             $table->timestamps();
@@ -89,8 +89,8 @@ return new class extends Migration
             $table->uuid('odontogram_id');
             $table->string('tooth_number', 5);
             
-            $table->jsonb('previous_data')->nullable();
-            $table->jsonb('new_data')->nullable();
+            $table->json('previous_data')->nullable();
+            $table->json('new_data')->nullable();
             $table->string('change_type', 50)->nullable();
             
             $table->uuid('changed_by');
@@ -133,7 +133,7 @@ return new class extends Migration
             
             // Localização
             $table->string('tooth_number', 5)->nullable();
-            $table->jsonb('surfaces')->nullable();
+            $table->json('surfaces')->nullable();
             
             // Valores
             $table->decimal('price', 10, 2)->nullable();

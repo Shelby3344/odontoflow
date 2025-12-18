@@ -71,10 +71,10 @@ return new class extends Migration
             $table->index('created_at');
         });
 
-        // Full-text search index (PostgreSQL)
-        if (config('database.default') === 'pgsql') {
-            DB::statement('CREATE INDEX patients_name_trgm_idx ON patients USING gin (name gin_trgm_ops)');
-        }
+        // Full-text search index (PostgreSQL only)
+        // if (config('database.default') === 'pgsql') {
+        //     DB::statement('CREATE INDEX patients_name_trgm_idx ON patients USING gin (name gin_trgm_ops)');
+        // }
     }
 
     public function down(): void

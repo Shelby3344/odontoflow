@@ -1,16 +1,15 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Interfaces\Http\Controllers\Api\V1\AuthController;
-use App\Interfaces\Http\Controllers\Api\V1\PatientController;
-use App\Interfaces\Http\Controllers\Api\V1\ScheduleController;
-use App\Interfaces\Http\Controllers\Api\V1\ClinicalController;
-use App\Interfaces\Http\Controllers\Api\V1\OdontogramController;
-use App\Interfaces\Http\Controllers\Api\V1\FinancialController;
-use App\Interfaces\Http\Controllers\Api\V1\AIController;
-use App\Interfaces\Http\Controllers\Api\V1\CommunicationController;
-use App\Interfaces\Http\Controllers\Api\V1\ReportController;
-use App\Interfaces\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\PatientController;
+use App\Http\Controllers\Api\V1\ScheduleController;
+use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\OdontogramController;
+use App\Http\Controllers\Api\V1\AIController;
+use App\Http\Controllers\Api\V1\CommunicationController;
+use App\Http\Controllers\Api\V1\FinancialController;
+use App\Http\Controllers\Api\V1\ReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -29,16 +28,12 @@ Route::prefix('v1')->group(function () {
     // ==========================================
     Route::prefix('auth')->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
-        Route::post('/register', [AuthController::class, 'register']);
-        Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-        Route::post('/reset-password', [AuthController::class, 'resetPassword']);
-        Route::post('/refresh', [AuthController::class, 'refresh']);
     });
 
     // ==========================================
     // ROTAS AUTENTICADAS
     // ==========================================
-    Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
+    Route::middleware('auth:sanctum')->group(function () {
 
         // Auth
         Route::prefix('auth')->group(function () {
@@ -47,6 +42,9 @@ Route::prefix('v1')->group(function () {
             Route::put('/profile', [AuthController::class, 'updateProfile']);
             Route::put('/password', [AuthController::class, 'updatePassword']);
         });
+
+        // Dashboard
+        Route::get('/dashboard', [DashboardController::class, 'index']);
 
         // ==========================================
         // PACIENTES
@@ -61,21 +59,22 @@ Route::prefix('v1')->group(function () {
             Route::put('/{id}', [PatientController::class, 'update']);
             Route::delete('/{id}', [PatientController::class, 'destroy']);
             
-            // Anamnese
-            Route::get('/{id}/anamnesis', [PatientController::class, 'anamnesis']);
-            Route::post('/{id}/anamnesis', [PatientController::class, 'storeAnamnesis']);
-            Route::put('/{id}/anamnesis', [PatientController::class, 'updateAnamnesis']);
-            
-            // Prontuário
-            Route::get('/{id}/records', [ClinicalController::class, 'patientRecords']);
-            
-            // Odontograma
+            // Odontograma do paciente
             Route::get('/{id}/odontogram', [OdontogramController::class, 'show']);
             Route::put('/{id}/odontogram', [OdontogramController::class, 'update']);
             
             // Financeiro do paciente
             Route::get('/{id}/transactions', [FinancialController::class, 'patientTransactions']);
             Route::get('/{id}/budgets', [FinancialController::class, 'patientBudgets']);
+        });
+
+        // ==========================================
+        // ODONTOGRAMA
+        // ==========================================
+        Route::prefix('odontogram')->group(function () {
+            Route::put('/{patientId}/tooth/{toothNumber}', [OdontogramController::class, 'updateTooth']);
+            Route::get('/{patientId}/history', [OdontogramController::class, 'history']);
+            Route::get('/{patientId}/analysis', [OdontogramController::class, 'aiAnalysis']);
         });
 
         // ==========================================
@@ -95,7 +94,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/appointments/{id}/complete', [ScheduleController::class, 'completeService']);
             Route::post('/appointments/{id}/no-show', [ScheduleController::class, 'noShow']);
             
-            // Disponibilidade
+            // Disponibilidade e IA
             Route::get('/available-slots', [ScheduleController::class, 'availableSlots']);
             Route::get('/smart-suggestions', [ScheduleController::class, 'smartSuggestions']);
             
@@ -103,58 +102,6 @@ Route::prefix('v1')->group(function () {
             Route::get('/blocks', [ScheduleController::class, 'blocks']);
             Route::post('/blocks', [ScheduleController::class, 'createBlock']);
             Route::delete('/blocks/{id}', [ScheduleController::class, 'deleteBlock']);
-        });
-
-        // ==========================================
-        // CLÍNICO
-        // ==========================================
-        Route::prefix('clinical')->group(function () {
-            // Prontuário
-            Route::get('/records', [ClinicalController::class, 'index']);
-            Route::post('/records', [ClinicalController::class, 'store']);
-            Route::get('/records/{id}', [ClinicalController::class, 'show']);
-            Route::put('/records/{id}', [ClinicalController::class, 'update']);
-            Route::post('/records/{id}/sign', [ClinicalController::class, 'sign']);
-            Route::get('/records/{id}/history', [ClinicalController::class, 'history']);
-            
-            // Procedimentos
-            Route::get('/procedure-types', [ClinicalController::class, 'procedureTypes']);
-            Route::post('/procedures', [ClinicalController::class, 'createProcedure']);
-            Route::put('/procedures/{id}', [ClinicalController::class, 'updateProcedure']);
-            Route::post('/procedures/{id}/complete', [ClinicalController::class, 'completeProcedure']);
-        });
-
-        // ==========================================
-        // ODONTOGRAMA
-        // ==========================================
-        Route::prefix('odontogram')->group(function () {
-            Route::put('/{patientId}/tooth/{toothNumber}', [OdontogramController::class, 'updateTooth']);
-            Route::get('/{patientId}/history', [OdontogramController::class, 'history']);
-            Route::get('/{patientId}/analysis', [OdontogramController::class, 'aiAnalysis']);
-        });
-
-        // ==========================================
-        // FINANCEIRO
-        // ==========================================
-        Route::prefix('financial')->group(function () {
-            // Transações
-            Route::get('/transactions', [FinancialController::class, 'transactions']);
-            Route::post('/transactions', [FinancialController::class, 'createTransaction']);
-            Route::put('/transactions/{id}', [FinancialController::class, 'updateTransaction']);
-            Route::post('/transactions/{id}/pay', [FinancialController::class, 'markAsPaid']);
-            
-            // Orçamentos
-            Route::get('/budgets', [FinancialController::class, 'budgets']);
-            Route::post('/budgets', [FinancialController::class, 'createBudget']);
-            Route::get('/budgets/{id}', [FinancialController::class, 'showBudget']);
-            Route::put('/budgets/{id}', [FinancialController::class, 'updateBudget']);
-            Route::post('/budgets/{id}/approve', [FinancialController::class, 'approveBudget']);
-            Route::post('/budgets/{id}/send', [FinancialController::class, 'sendBudget']);
-            
-            // Dashboard
-            Route::get('/dashboard', [FinancialController::class, 'dashboard']);
-            Route::get('/cash-flow', [FinancialController::class, 'cashFlow']);
-            Route::get('/receivables', [FinancialController::class, 'receivables']);
         });
 
         // ==========================================
@@ -182,10 +129,30 @@ Route::prefix('v1')->group(function () {
             Route::post('/send', [CommunicationController::class, 'send']);
             Route::post('/send-bulk', [CommunicationController::class, 'sendBulk']);
             Route::get('/history', [CommunicationController::class, 'history']);
+        });
+
+        // ==========================================
+        // FINANCEIRO
+        // ==========================================
+        Route::prefix('financial')->group(function () {
+            // Dashboard
+            Route::get('/dashboard', [FinancialController::class, 'dashboard']);
+            Route::get('/cash-flow', [FinancialController::class, 'cashFlow']);
+            Route::get('/receivables', [FinancialController::class, 'receivables']);
             
-            // Webhooks (WhatsApp, SMS)
-            Route::post('/webhook/whatsapp', [CommunicationController::class, 'whatsappWebhook']);
-            Route::post('/webhook/sms', [CommunicationController::class, 'smsWebhook']);
+            // Transações
+            Route::get('/transactions', [FinancialController::class, 'transactions']);
+            Route::post('/transactions', [FinancialController::class, 'createTransaction']);
+            Route::put('/transactions/{id}', [FinancialController::class, 'updateTransaction']);
+            Route::post('/transactions/{id}/pay', [FinancialController::class, 'markAsPaid']);
+            
+            // Orçamentos
+            Route::get('/budgets', [FinancialController::class, 'budgets']);
+            Route::post('/budgets', [FinancialController::class, 'createBudget']);
+            Route::get('/budgets/{id}', [FinancialController::class, 'showBudget']);
+            Route::put('/budgets/{id}', [FinancialController::class, 'updateBudget']);
+            Route::post('/budgets/{id}/approve', [FinancialController::class, 'approveBudget']);
+            Route::post('/budgets/{id}/send', [FinancialController::class, 'sendBudget']);
         });
 
         // ==========================================
@@ -200,35 +167,13 @@ Route::prefix('v1')->group(function () {
             Route::get('/professionals', [ReportController::class, 'professionals']);
             Route::get('/export/{type}', [ReportController::class, 'export']);
         });
+    });
 
-        // ==========================================
-        // USUÁRIOS E PERMISSÕES (Admin)
-        // ==========================================
-        Route::middleware('can:manage-users')->prefix('users')->group(function () {
-            Route::get('/', [UserController::class, 'index']);
-            Route::post('/', [UserController::class, 'store']);
-            Route::get('/{id}', [UserController::class, 'show']);
-            Route::put('/{id}', [UserController::class, 'update']);
-            Route::delete('/{id}', [UserController::class, 'destroy']);
-            Route::put('/{id}/roles', [UserController::class, 'updateRoles']);
-        });
-
-        Route::middleware('can:manage-roles')->prefix('roles')->group(function () {
-            Route::get('/', [UserController::class, 'roles']);
-            Route::post('/', [UserController::class, 'createRole']);
-            Route::put('/{id}', [UserController::class, 'updateRole']);
-        });
-
-        // ==========================================
-        // CONFIGURAÇÕES
-        // ==========================================
-        Route::prefix('settings')->group(function () {
-            Route::get('/clinic', [SettingsController::class, 'clinic']);
-            Route::put('/clinic', [SettingsController::class, 'updateClinic']);
-            Route::get('/schedule', [SettingsController::class, 'schedule']);
-            Route::put('/schedule', [SettingsController::class, 'updateSchedule']);
-            Route::get('/notifications', [SettingsController::class, 'notifications']);
-            Route::put('/notifications', [SettingsController::class, 'updateNotifications']);
-        });
+    // ==========================================
+    // WEBHOOKS (Públicos com validação)
+    // ==========================================
+    Route::prefix('webhooks')->group(function () {
+        Route::post('/whatsapp', [CommunicationController::class, 'whatsappWebhook']);
+        Route::post('/sms', [CommunicationController::class, 'smsWebhook']);
     });
 });
